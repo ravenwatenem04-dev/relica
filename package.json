@@ -1,0 +1,8 @@
+{
+  "name": "multica-console",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @multica-console/backend dev",
+    "build": "pnpm --filter @multica-console/backend build"
+  }
+}
