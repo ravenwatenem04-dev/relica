@@ -6,6 +6,11 @@ import { EventPoller, MulticaPollerClient } from "./services/event-poller.js";
 import issuesRoutes from "./routes/issues.js";
 import agentRoutes from "./routes/agents.js";
 import eventsRoutes from "./routes/events.js";
+import commentsRoutes from "./routes/comments.js";
+import runsRoutes from "./routes/runs.js";
+import reviewsRoutes from "./routes/reviews.js";
+import usageRoutes from "./routes/usage.js";
+import { UsageAggregator } from "./services/usage-aggregator.js";
 
 const app = Fastify({ logger: true });
 
@@ -21,6 +26,10 @@ app.get("/health", async () => ({
 
 await app.register(issuesRoutes);
 await app.register(agentRoutes);
+await app.register(commentsRoutes);
+await app.register(runsRoutes);
+await app.register(reviewsRoutes);
+await app.register(usageRoutes);
 
 try {
   const redisClients = await initRedis();
@@ -42,6 +51,11 @@ try {
   });
 
   poller.start();
+
+  (app as any).usageAggregator = new UsageAggregator({
+    multicaClient: {},
+    redis: redisClients.data,
+  });
 
   await app.register(
     async (instance) => {
