@@ -3,6 +3,9 @@
 @main
 struct MulticaConsoleApp: App {
     @StateObject private var authManager = AuthManager()
+    private var apiClient: APIClient {
+        APIClient(authManager: authManager)
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -24,8 +27,7 @@ struct MulticaConsoleApp: App {
                 }
 
                 NavigationStack {
-                    Text("Agents")
-                        .navigationTitle("Agents")
+                    AgentListView(apiClient: apiClient)
                 }
                 .tabItem {
                     Label("Agents", systemImage: "person.2")
