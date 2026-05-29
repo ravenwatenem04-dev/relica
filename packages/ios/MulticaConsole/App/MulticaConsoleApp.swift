@@ -2,8 +2,14 @@
 
 @main
 struct MulticaConsoleApp: App {
-    @StateObject private var authManager = AuthManager()
-    @State private var authViewModel = AuthViewModel(authManager: authManager)
+    @StateObject private var authManager: AuthManager
+    @State private var authViewModel: AuthViewModel
+
+    init() {
+        let authManager = AuthManager()
+        _authManager = StateObject(wrappedValue: authManager)
+        _authViewModel = State(initialValue: AuthViewModel(authManager: authManager))
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -14,8 +20,8 @@ struct MulticaConsoleApp: App {
                         .task {
                             await authViewModel.checkAuthentication()
                         }
-                case .authenticated:
-                    mainTabView
+                case .authenticated(let user):
+                    mainTabView(user: user)
                 case .unauthenticated:
                     LoginView(viewModel: authViewModel)
                 }
@@ -24,7 +30,7 @@ struct MulticaConsoleApp: App {
     }
 
     @ViewBuilder
-    private var mainTabView: some View {
+    private func mainTabView(user: User) -> some View {
         TabView {
             NavigationStack {
                 Text("Today")
@@ -59,8 +65,7 @@ struct MulticaConsoleApp: App {
             }
 
             NavigationStack {
-                Text("Settings")
-                    .navigationTitle("Settings")
+                SettingsView(user: user, authViewModel: authViewModel)
             }
             .tabItem {
                 Label("Settings", systemImage: "gearshape")
