@@ -7,6 +7,10 @@ final class AuthManager: ObservableObject {
     private let keychainService = "ai.multica.console"
     private let tokenAccount = "authToken"
 
+    var currentToken: String? {
+        KeychainHelper.read(service: keychainService, account: tokenAccount)
+    }
+
     init() {
         token = KeychainHelper.read(service: keychainService, account: tokenAccount)
     }
