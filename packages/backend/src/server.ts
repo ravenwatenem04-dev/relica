@@ -38,7 +38,7 @@ app.decorateRequest("session", null);
 app.addHook("onRequest", async (request, reply) => {
   const cookieHeader = request.headers.cookie || "";
   const cookies = parseCookies(cookieHeader);
-  const sessionId = cookies["multica_session"];
+  let sessionId = cookies["multica_session"];
   let session = sessionId ? sessionStore.get(sessionId) : null;
 
   if (!session) {
