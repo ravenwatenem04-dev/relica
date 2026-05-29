@@ -17,7 +17,7 @@ struct ReviewQueueSection: View {
                 EmptyRow(icon: icon, text: "Nothing here")
             } else {
                 ForEach(issues) { issue in
-                    NavigationLink(value: issue) {
+                    NavigationLink(value: issue.id) {
                         HStack {
                             StatusIcon(status: issue.status)
                             VStack(alignment: .leading, spacing: 2) {
@@ -25,7 +25,7 @@ struct ReviewQueueSection: View {
                                     .font(.body)
                                     .lineLimit(2)
                                 HStack(spacing: 4) {
-                                    Text(issue.status.replacingOccurrences(of: "_", with: " ").capitalized)
+                                    Text(issue.status.displayName)
                                         .font(.caption)
                                         .foregroundStyle(statusColor(issue.status))
                                     if let priority = issue.priority {
@@ -45,46 +45,37 @@ struct ReviewQueueSection: View {
         }
     }
 
-    private func statusColor(_ status: String) -> Color {
+    private func statusColor(_ status: IssueStatus) -> Color {
         switch status {
-        case "in_review": .blue
-        case "blocked": .red
-        case "in_progress": .orange
-        case "done": .green
-        case "todo": .gray
-        default: .secondary
+        case .inReview: .blue
+        case .blocked: .red
+        case .inProgress: .orange
+        case .done: .green
+        case .todo: .gray
+        case .backlog: .gray.opacity(0.5)
+        case .cancelled: .gray.opacity(0.5)
         }
     }
 }
 
 struct StatusIcon: View {
-    let status: String
+    let status: IssueStatus
 
     var body: some View {
-        Image(systemName: iconName)
-            .foregroundStyle(iconColor)
+        Image(systemName: status.systemImage)
+            .foregroundStyle(statusColor(status))
             .font(.callout)
     }
 
-    private var iconName: String {
+    private func statusColor(_ status: IssueStatus) -> Color {
         switch status {
-        case "in_review": "doc.text.magnifyingglass"
-        case "blocked": "exclamationmark.octagon"
-        case "in_progress": "arrow.triangle.2.circlepath"
-        case "done": "checkmark.circle"
-        case "todo": "circle"
-        default: "questionmark.circle"
-        }
-    }
-
-    private var iconColor: Color {
-        switch status {
-        case "in_review": .blue
-        case "blocked": .red
-        case "in_progress": .orange
-        case "done": .green
-        case "todo": .gray
-        default: .secondary
+        case .inReview: .blue
+        case .blocked: .red
+        case .inProgress: .orange
+        case .done: .green
+        case .todo: .gray
+        case .backlog: .gray.opacity(0.5)
+        case .cancelled: .gray.opacity(0.5)
         }
     }
 }

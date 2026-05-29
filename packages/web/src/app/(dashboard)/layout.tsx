@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
-export default function DashboardPage() {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const { data: me, isError } = useQuery({
     queryKey: ["me"],
@@ -29,58 +31,81 @@ export default function DashboardPage() {
     );
   }
 
+  const navItems = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard/agents", label: "Agents" },
+    { href: "/dashboard/issues", label: "Issues" },
+    { href: "/dashboard/reviews", label: "Reviews" },
+    { href: "/dashboard/usage", label: "Usage" },
+  ];
+
+  const linkStyle = (href: string): React.CSSProperties => ({
+    color: pathname === href ? "#fff" : "#aaa",
+    textDecoration: "none",
+    padding: "0.5rem 0.75rem",
+    borderRadius: "6px",
+    fontSize: "0.9rem",
+    background: pathname === href ? "#1a1a2e" : "transparent",
+    display: "block",
+  });
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#0f0f1a" }}>
-      <aside style={{ width: "220px", background: "#12122a", padding: "1.5rem 1rem", borderRight: "1px solid #2a2a4a" }}>
+      <nav style={{
+        width: "220px", background: "#12122a", padding: "1.5rem 1rem",
+        borderRight: "1px solid #2a2a4a", display: "flex", flexDirection: "column",
+      }}>
         <h2 style={{ color: "#4dc8a2", margin: "0 0 2rem", fontSize: "1.1rem" }}>Multica Console</h2>
-        <nav style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <Link href="/dashboard" style={navStyle}>Dashboard</Link>
-          <Link href="/dashboard/agents" style={navStyle}>Agents</Link>
-          <Link href="/dashboard/issues" style={navStyle}>Issues</Link>
-          <Link href="/dashboard/reviews" style={navStyle}>Reviews</Link>
-          <Link href="/dashboard/usage" style={navStyle}>Usage</Link>
-        </nav>
-      </aside>
+        {navItems.map((item) => (
+          <Link key={item.href} href={item.href} style={{ ...linkStyle(item.href), marginBottom: "0.25rem" }}>
+            {item.label}
+          </Link>
+        ))}
+      </nav>
 
-      <main style={{ flex: 1, padding: "2rem" }}>
-        <h1 style={{ margin: "0 0 1.5rem", fontSize: "1.75rem" }}>Dashboard</h1>
-        <p style={{ color: "#aaa" }}>Welcome, {me?.name || me?.email || "User"}.</p>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <header style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "0.75rem 1rem", background: "#12122a", borderBottom: "1px solid #2a2a4a",
+        }}>
+          <span style={{ color: "#4dc8a2", fontWeight: 600, fontSize: "0.95rem" }}>Multica Console</span>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{
+              background: "none", border: "none", color: "#aaa", fontSize: "1.5rem",
+              cursor: "pointer", padding: "0.25rem", lineHeight: 1,
+            }}
+          >
+            {menuOpen ? "✕" : "☰"}
+          </button>
+        </header>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem", marginTop: "2rem" }}>
-          <Link href="/dashboard/agents" style={cardStyle}>
-            <h3 style={{ margin: 0, fontSize: "0.875rem", color: "#888" }}>Agents</h3>
-            <p style={{ fontSize: "1.5rem", margin: "0.5rem 0 0", color: "#fff" }}>--</p>
-          </Link>
-          <Link href="/dashboard/issues" style={cardStyle}>
-            <h3 style={{ margin: 0, fontSize: "0.875rem", color: "#888" }}>Issues</h3>
-            <p style={{ fontSize: "1.5rem", margin: "0.5rem 0 0", color: "#fff" }}>--</p>
-          </Link>
-          <Link href="/dashboard/reviews" style={cardStyle}>
-            <h3 style={{ margin: 0, fontSize: "0.875rem", color: "#888" }}>Needs Review</h3>
-            <p style={{ fontSize: "1.5rem", margin: "0.5rem 0 0", color: "#fff" }}>--</p>
-          </Link>
-          <Link href="/dashboard/usage" style={cardStyle}>
-            <h3 style={{ margin: 0, fontSize: "0.875rem", color: "#888" }}>Usage</h3>
-            <p style={{ fontSize: "1.5rem", margin: "0.5rem 0 0", color: "#fff" }}>--</p>
-          </Link>
-        </div>
-      </main>
+        {menuOpen && (
+          <div style={{ background: "#12122a", borderBottom: "1px solid #2a2a4a", padding: "0.5rem 1rem" }}>
+            {navItems.map((item) => (
+              <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} style={linkStyle(item.href)}>
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <main style={{ flex: 1, padding: "2rem", overflow: "auto" }}>
+          <p style={{ margin: "0 0 1.5rem", color: "#aaa", fontSize: "0.9rem" }}>
+            Welcome, {me?.name || me?.email || "User"}.
+          </p>
+          {children}
+        </main>
+      </div>
+
+      <style>{`
+        header { display: none !important; }
+        @media (max-width: 640px) {
+          nav { display: none !important; }
+          header { display: flex !important; }
+          main { padding: 1rem !important; }
+        }
+      `}</style>
     </div>
   );
 }
-
-const navStyle: React.CSSProperties = {
-  color: "#aaa",
-  textDecoration: "none",
-  padding: "0.5rem 0.75rem",
-  borderRadius: "6px",
-  fontSize: "0.9rem",
-};
-
-const cardStyle: React.CSSProperties = {
-  background: "#1a1a2e",
-  padding: "1.25rem",
-  borderRadius: "10px",
-  textDecoration: "none",
-  border: "1px solid #2a2a4a",
-};

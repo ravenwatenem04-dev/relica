@@ -2,52 +2,47 @@
 
 @main
 struct MulticaConsoleApp: App {
-    @StateObject private var authManager = AuthManager()
-    private var apiClient: APIClient {
-        APIClient(authManager: authManager)
-    }
-
     var body: some Scene {
         WindowGroup {
-            TabView {
-                TodayView(apiClient: apiClient)
-                    .tabItem {
-                        Label("Today", systemImage: "sun.max")
-                    }
+            ContentView()
+        }
+    }
+}
 
-                NavigationStack {
-                    Text("Issues")
-                        .navigationTitle("Issues")
+struct ContentView: View {
+    @State private var selectedTab = 0
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            TodayView()
+                .tabItem {
+                    Label("Today", systemImage: "sun.max")
                 }
+                .tag(0)
+
+            IssueListView()
                 .tabItem {
                     Label("Issues", systemImage: "exclamationmark.bubble")
                 }
+                .tag(1)
 
-                NavigationStack {
-                    Text("Agents")
-                        .navigationTitle("Agents")
-                }
+            AgentListView()
                 .tabItem {
                     Label("Agents", systemImage: "person.2")
                 }
+                .tag(2)
 
-                NavigationStack {
-                    Text("Usage")
-                        .navigationTitle("Usage")
-                }
+            UsageView()
                 .tabItem {
                     Label("Usage", systemImage: "chart.bar")
                 }
+                .tag(3)
 
-                NavigationStack {
-                    Text("Settings")
-                        .navigationTitle("Settings")
-                }
+            SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
-            }
-            .environmentObject(authManager)
+                .tag(4)
         }
     }
 }

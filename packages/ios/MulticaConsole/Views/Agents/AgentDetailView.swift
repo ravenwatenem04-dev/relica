@@ -1,9 +1,12 @@
 import SwiftUI
 
 struct AgentDetailView: View {
-    @State private var showIssuePicker = false
-    let viewModel: AgentListViewModel
     let agent: Agent
+    @State private var runs: [Run] = []
+    @State private var issues: [Issue] = []
+    @State private var isLoadingRuns = false
+    @State private var showIssuePicker = false
+    @State private var isAssigning = false
 
     var body: some View {
         List {
@@ -56,11 +59,13 @@ struct AgentDetailView: View {
             }
 
             Section("Recent Work") {
-                if viewModel.selectedAgentRuns.isEmpty {
+                if isLoadingRuns {
+                    ProgressView()
+                } else if runs.isEmpty {
                     Text("No recent runs")
                         .foregroundStyle(.tertiary)
                 } else {
-                    ForEach(viewModel.selectedAgentRuns) { run in
+                    ForEach(runs) { run in
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text(run.agentName)
@@ -87,24 +92,87 @@ struct AgentDetailView: View {
 
             Section {
                 Button("Assign to Issue") {
-                    Task { await viewModel.loadIssues() }
+                    Task { await loadIssues() }
                     showIssuePicker = true
                 }
-                .disabled(viewModel.isAssigning)
+                .disabled(isAssigning)
             }
         }
         .listStyle(.insetGrouped)
         .navigationTitle(agent.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await viewModel.selectAgent(agent)
+            await loadRuns()
         }
         .sheet(isPresented: $showIssuePicker) {
-            IssuePickerView(viewModel: viewModel)
+            issuePickerView
         }
     }
 
-    func runStatusBadge(_ status: String) -> some View {
+    private var issuePickerView: some View {
+        NavigationStack {
+            List(issues) { issue in
+                Button {
+                    Task {
+                        await assignToIssue(issueId: issue.id)
+                        showIssuePicker = false
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(issue.title)
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                        Text("Status: \(issue.status.displayName)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .navigationTitle("Select Issue")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showIssuePicker = false }
+                }
+            }
+            .overlay {
+                if isAssigning {
+                    ProgressView("Assigning...")
+                }
+            }
+        }
+    }
+
+    private func loadRuns() async {
+        isLoadingRuns = true
+        do {
+            runs = try await APIClient.shared.fetchAgentRuns(agentId: agent.id, limit: 10)
+        } catch {
+            // surface through empty state
+        }
+        isLoadingRuns = false
+    }
+
+    private func loadIssues() async {
+        do {
+            issues = try await APIClient.shared.fetchIssues()
+        } catch {
+            // surface through empty state
+        }
+    }
+
+    private func assignToIssue(issueId: String) async {
+        isAssigning = true
+        do {
+            _ = try await APIClient.shared.assignIssue(id: issueId, agentId: agent.id)
+            await loadRuns()
+        } catch {
+            // surface through error state
+        }
+        isAssigning = false
+    }
+
+    private func runStatusBadge(_ status: String) -> some View {
         let color: Color = switch status {
         case "running": .blue
         case "succeeded": .green
@@ -124,7 +192,7 @@ struct AgentDetailView: View {
             )
     }
 
-    func formattedDate(_ iso: String) -> String {
+    private func formattedDate(_ iso: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         guard let date = formatter.date(from: iso) ?? ISO8601DateFormatter().date(from: iso) else {
@@ -134,44 +202,5 @@ struct AgentDetailView: View {
         display.dateStyle = .medium
         display.timeStyle = .short
         return display.string(from: date)
-    }
-}
-
-struct IssuePickerView: View {
-    @Environment(\.dismiss) private var dismiss
-    let viewModel: AgentListViewModel
-
-    var body: some View {
-        NavigationStack {
-            List(viewModel.availableIssues) { issue in
-                Button {
-                    Task {
-                        await viewModel.assignAgentToIssue(issueId: issue.id)
-                        dismiss()
-                    }
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(issue.title)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                        Text("Status: \(issue.status)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .navigationTitle("Select Issue")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .overlay {
-                if viewModel.isAssigning {
-                    ProgressView("Assigning...")
-                }
-            }
-        }
     }
 }

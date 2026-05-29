@@ -22,7 +22,7 @@ struct AgentListView: View {
                     )
                 } else {
                     List(viewModel.agents) { agent in
-                        NavigationLink(destination: AgentDetailView(viewModel: viewModel, agent: agent)) {
+                        NavigationLink(destination: AgentDetailView(agent: agent)) {
                             AgentRow(agent: agent)
                         }
                     }

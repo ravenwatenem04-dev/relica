@@ -12,14 +12,12 @@ final class AgentListViewModel {
     private(set) var availableIssues: [Issue] = []
     private(set) var isAssigning = false
 
-    private let apiClient = APIClient.shared
-
     func loadAgents() async {
         isLoading = true
         error = nil
 
         do {
-            let fetched = try await apiClient.fetchAgents()
+            let fetched = try await APIClient.shared.fetchAgents()
             agents = fetched.sorted { lhs, rhs in
                 let order: [AgentStatus: Int] = [.running: 0, .available: 1, .disabled: 2, .blocked: 3]
                 let lOrder = order[lhs.status] ?? 99
@@ -39,7 +37,7 @@ final class AgentListViewModel {
         selectedAgentRuns = []
 
         do {
-            selectedAgentRuns = try await apiClient.fetchAgentRuns(agentId: agent.id, limit: 10)
+            selectedAgentRuns = try await APIClient.shared.fetchAgentRuns(agentId: agent.id, limit: 10)
         } catch {
             self.error = error.localizedDescription
         }
@@ -47,7 +45,7 @@ final class AgentListViewModel {
 
     func loadIssues() async {
         do {
-            availableIssues = try await apiClient.fetchIssues()
+            availableIssues = try await APIClient.shared.fetchIssues()
         } catch {
             self.error = error.localizedDescription
         }
@@ -58,7 +56,7 @@ final class AgentListViewModel {
         isAssigning = true
 
         do {
-            try await apiClient.assignIssue(issueId: issueId, agentId: agent.id)
+            _ = try await APIClient.shared.assignIssue(id: issueId, agentId: agent.id)
             await selectAgent(agent)
             await loadAgents()
         } catch {

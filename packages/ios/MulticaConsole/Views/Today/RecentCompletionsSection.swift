@@ -9,18 +9,16 @@ struct RecentCompletionsSection: View {
                 EmptyRow(icon: "checkmark.circle", text: "Nothing here")
             } else {
                 ForEach(issues) { issue in
-                    NavigationLink(value: issue) {
+                    NavigationLink(value: issue.id) {
                         HStack {
                             StatusIcon(status: issue.status)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(issue.title)
                                     .font(.body)
                                     .lineLimit(2)
-                                if let updatedAt = formattedDate(issue.updatedAt) {
-                                    Text(updatedAt)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+                                Text(issue.updatedAtRelative)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                         .padding(.vertical, 2)
@@ -30,14 +28,5 @@ struct RecentCompletionsSection: View {
         } header: {
             SectionHeader(title: "Recent Completions", icon: "checkmark.circle", count: issues.count)
         }
-    }
-
-    private func formattedDate(_ iso: String) -> String? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: iso) else { return nil }
-        let relative = RelativeDateTimeFormatter()
-        relative.unitsStyle = .abbreviated
-        return relative.localizedString(for: date, relativeTo: Date())
     }
 }
