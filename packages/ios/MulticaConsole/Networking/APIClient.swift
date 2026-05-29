@@ -3,7 +3,7 @@ import Foundation
 actor APIClient {
     static let shared = APIClient()
 
-    private var baseURL: String = "http://localhost:4000"
+    private var baseURL: String = "http://localhost:3001"
     private var token: String?
     private let session: URLSession
 
