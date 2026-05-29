@@ -7,10 +7,7 @@ struct MulticaConsoleApp: App {
     var body: some Scene {
         WindowGroup {
             TabView {
-                NavigationStack {
-                    Text("Today")
-                        .navigationTitle("Today")
-                }
+                TodayView()
                 .tabItem {
                     Label("Today", systemImage: "sun.max")
                 }

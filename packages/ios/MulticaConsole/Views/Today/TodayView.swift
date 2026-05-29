@@ -20,11 +20,20 @@ struct TodayView: View {
                 RecentCompletionsSection(issues: viewModel.recentCompletions)
             }
             .navigationTitle("Today")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ConnectionIndicator(state: viewModel.streamState)
+                }
+            }
             .refreshable {
                 await viewModel.fetchData()
             }
             .task {
                 await viewModel.fetchData()
+                viewModel.startLiveUpdatesIfNeeded()
+            }
+            .onDisappear {
+                viewModel.stopLiveUpdates()
             }
             .overlay {
                 if viewModel.isLoading {
@@ -37,6 +46,39 @@ struct TodayView: View {
             .navigationDestination(for: Agent.self) { agent in
                 AgentDetailStub(agent: agent)
             }
+        }
+    }
+}
+
+private struct ConnectionIndicator: View {
+    let state: EventStreamConnectionState
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: 10, height: 10)
+            .accessibilityLabel(label)
+    }
+
+    private var color: Color {
+        switch state {
+        case .connected:
+            return .green
+        case .connecting:
+            return .yellow
+        case .disconnected:
+            return .red
+        }
+    }
+
+    private var label: String {
+        switch state {
+        case .connected:
+            return "Connected"
+        case .connecting:
+            return "Connecting"
+        case .disconnected:
+            return "Disconnected"
         }
     }
 }
