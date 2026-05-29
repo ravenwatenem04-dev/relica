@@ -69,6 +69,11 @@ actor APIClient {
         return response.issues
     }
 
+    func fetchUsageSummary(period: UsagePeriod) async throws -> UsageSummary {
+        let data = try await request(path: "/api/usage/summary?period=\(period.rawValue)")
+        return try JSONDecoder().decode(UsageSummary.self, from: data)
+    }
+
     func assignIssue(issueId: String, agentId: String) async throws {
         let body = AssignRequest(agentId: agentId)
         let _ = try await request(path: "/api/issues/\(issueId)/assign", method: "POST", body: body)
