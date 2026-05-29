@@ -12,6 +12,9 @@
 		A10000000000000000000003 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* Models.swift */; };
 		A10000000000000000000004 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* AuthManager.swift */; };
 		A10000000000000000000005 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* KeychainHelper.swift */; };
+		A10000000000000000000006 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* SettingsView.swift */; };
+		A10000000000000000000007 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* AuthViewModel.swift */; };
+		A10000000000000000000008 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018 /* LoginView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,6 +24,9 @@
 		A10000000000000000000013 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		A10000000000000000000014 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		A10000000000000000000015 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		A10000000000000000000016 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A10000000000000000000017 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		A10000000000000000000018 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -48,6 +54,8 @@
 				A10000000000000000000040 /* App */,
 				A10000000000000000000041 /* API */,
 				A10000000000000000000042 /* Utilities */,
+				A10000000000000000000043 /* Views */,
+				A10000000000000000000045 /* ViewModels */,
 			);
 			path = MulticaConsole;
 			sourceTree = "<group>";
@@ -84,6 +92,39 @@
 				A10000000000000000000015 /* KeychainHelper.swift */,
 			);
 			path = Utilities;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000043 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000046 /* Auth */,
+				A10000000000000000000044 /* Settings */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000044 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000016 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000045 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000017 /* AuthViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A10000000000000000000046 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000018 /* LoginView.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -159,6 +200,9 @@
 				A10000000000000000000003 /* Models.swift in Sources */,
 				A10000000000000000000004 /* AuthManager.swift in Sources */,
 				A10000000000000000000005 /* KeychainHelper.swift in Sources */,
+				A10000000000000000000006 /* SettingsView.swift in Sources */,
+				A10000000000000000000007 /* AuthViewModel.swift in Sources */,
+				A10000000000000000000008 /* LoginView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -12,6 +12,10 @@ final class APIClient {
     private let session: URLSession
     private let authManager: AuthManager
 
+    var apiBaseURL: URL {
+        baseURL
+    }
+
     init(authManager: AuthManager, session: URLSession = .shared) {
         let baseURLString = ProcessInfo.processInfo.environment["MULTICA_API_BASE_URL"] ?? "http://localhost:4000"
         self.baseURL = URL(string: baseURLString) ?? URL(string: "http://localhost:4000")!
