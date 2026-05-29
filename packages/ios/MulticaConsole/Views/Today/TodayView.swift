@@ -1,7 +1,13 @@
 import SwiftUI
 
 struct TodayView: View {
-    @State private var viewModel = TodayViewModel()
+    let apiClient: APIClient
+    @State private var viewModel: TodayViewModel
+
+    init(apiClient: APIClient) {
+        self.apiClient = apiClient
+        self._viewModel = State(initialValue: TodayViewModel(apiClient: apiClient))
+    }
 
     var body: some View {
         NavigationStack {
@@ -20,20 +26,11 @@ struct TodayView: View {
                 RecentCompletionsSection(issues: viewModel.recentCompletions)
             }
             .navigationTitle("Today")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    ConnectionIndicator(state: viewModel.streamState)
-                }
-            }
             .refreshable {
                 await viewModel.fetchData()
             }
             .task {
                 await viewModel.fetchData()
-                viewModel.startLiveUpdatesIfNeeded()
-            }
-            .onDisappear {
-                viewModel.stopLiveUpdates()
             }
             .overlay {
                 if viewModel.isLoading {
@@ -46,39 +43,6 @@ struct TodayView: View {
             .navigationDestination(for: Agent.self) { agent in
                 AgentDetailStub(agent: agent)
             }
-        }
-    }
-}
-
-private struct ConnectionIndicator: View {
-    let state: EventStreamConnectionState
-
-    var body: some View {
-        Circle()
-            .fill(color)
-            .frame(width: 10, height: 10)
-            .accessibilityLabel(label)
-    }
-
-    private var color: Color {
-        switch state {
-        case .connected:
-            return .green
-        case .connecting:
-            return .yellow
-        case .disconnected:
-            return .red
-        }
-    }
-
-    private var label: String {
-        switch state {
-        case .connected:
-            return "Connected"
-        case .connecting:
-            return "Connecting"
-        case .disconnected:
-            return "Disconnected"
         }
     }
 }
@@ -110,9 +74,7 @@ private struct AgentDetailStub: View {
         List {
             Text(agent.displayName)
                 .font(.title)
-            LabeledContent("Status") {
-                AgentStatusBadge(status: agent.status)
-            }
+            LabeledContent("Status", value: agent.status.capitalized)
             LabeledContent("Model", value: agent.model)
             if let task = agent.currentTask {
                 LabeledContent("Current Task", value: task.title)

@@ -9,59 +9,31 @@ final class TodayViewModel {
     private(set) var errors: [Issue] = []
     private(set) var recentCompletions: [Issue] = []
     private(set) var isLoading = true
-    private(set) var streamState: EventStreamConnectionState = .disconnected
 
-    private let apiClient = APIClient.shared
-    private let eventStream = EventStreamService()
-    private var isStreamStarted = false
+    private let apiClient: APIClient
+
+    init(apiClient: APIClient) {
+        self.apiClient = apiClient
+    }
 
     func fetchData() async {
         isLoading = true
         defer { isLoading = false }
 
         do {
-            async let agents = apiClient.fetchAgents()
-            async let issues = apiClient.fetchIssues(limit: 100)
+            async let agents = apiClient.listAgents()
+            async let review = apiClient.listIssues(filters: IssueFilters(status: "in_review"))
+            async let blocked = apiClient.listIssues(filters: IssueFilters(status: "blocked"))
+            async let done = apiClient.listIssues(filters: IssueFilters(status: "done", limit: 5))
 
-            let (allAgents, allIssues) = try await (agents, issues)
+            let (agentsResponse, reviewResponse, blockedResponse, doneResponse) = try await (agents, review, blocked, done)
 
-            activeRuns = allAgents.filter { $0.status == .running }
-            reviewQueue = allIssues.filter { $0.status == "in_review" }
-            errors = allIssues.filter { $0.status == "blocked" }
-            recentCompletions = allIssues
-                .filter { $0.status == "done" }
-                .sorted { $0.updatedAt > $1.updatedAt }
-                .prefix(5)
-                .map { $0 }
+            activeRuns = agentsResponse.agents.filter { $0.status == "running" }
+            reviewQueue = reviewResponse.issues
+            errors = blockedResponse.issues
+            recentCompletions = doneResponse.issues.sorted { $0.updatedAt > $1.updatedAt }
         } catch {
             // API errors surfaced through empty states
-        }
-    }
-
-    func startLiveUpdatesIfNeeded() {
-        guard !isStreamStarted else { return }
-        isStreamStarted = true
-
-        eventStream.start(onStateChange: { [weak self] state in
-            self?.streamState = state
-        }, onEvent: { [weak self] event in
-            guard let self else { return }
-            await self.handleEvent(event)
-        })
-    }
-
-    func stopLiveUpdates() {
-        eventStream.stop()
-        streamState = .disconnected
-        isStreamStarted = false
-    }
-
-    private func handleEvent(_ event: SSEEvent) async {
-        switch event.type {
-        case "agent_status", "issue_created", "issue_updated", "run_completed":
-            await fetchData()
-        default:
-            break
         }
     }
 }

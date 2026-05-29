@@ -3,14 +3,17 @@
 @main
 struct MulticaConsoleApp: App {
     @StateObject private var authManager = AuthManager()
+    private var apiClient: APIClient {
+        APIClient(authManager: authManager)
+    }
 
     var body: some Scene {
         WindowGroup {
             TabView {
-                TodayView()
-                .tabItem {
-                    Label("Today", systemImage: "sun.max")
-                }
+                TodayView(apiClient: apiClient)
+                    .tabItem {
+                        Label("Today", systemImage: "sun.max")
+                    }
 
                 NavigationStack {
                     Text("Issues")
