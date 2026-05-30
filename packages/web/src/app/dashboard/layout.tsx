@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -52,7 +52,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
       <main style={{ flex: 1, padding: "2rem", overflow: "auto" }}>
-        {children}
+        <Suspense fallback={<div style={{ padding: "2rem", color: "#888" }}>Loading...</div>}>
+          {children}
+        </Suspense>
       </main>
     </div>
   );
