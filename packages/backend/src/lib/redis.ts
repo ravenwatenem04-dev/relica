@@ -12,37 +12,23 @@ let clients: RedisClients | null = null;
 let enabled = false;
 
 function createClient(label: string): Redis {
+  const commonOpts = {
+    maxRetriesPerRequest: 1,
+    retryStrategy: () => null,
+    lazyConnect: true,
+    connectTimeout: 2000,
+    enableOfflineQueue: false,
+  };
+
   const client = REDIS_URL
-    ? new Redis(REDIS_URL, {
-        maxRetriesPerRequest: null,
-        retryStrategy: (times) => {
-          const delay = Math.min(Math.pow(2, times) * 100, 10000);
-          return delay;
-        },
-        lazyConnect: true,
-      })
+    ? new Redis(REDIS_URL, commonOpts)
     : new Redis({
         host: process.env.REDIS_HOST ?? "localhost",
         port: parseInt(process.env.REDIS_PORT ?? "6379", 10),
-        maxRetriesPerRequest: null,
-        retryStrategy: (times) => {
-          const delay = Math.min(Math.pow(2, times) * 100, 10000);
-          return delay;
-        },
-        lazyConnect: true,
+        ...commonOpts,
       });
 
-  client.on("error", (err) => {
-    console.warn(`[redis:${label}] connection error:`, err.message);
-  });
-
-  client.on("connect", () => {
-    console.log(`[redis:${label}] connected`);
-  });
-
-  client.on("close", () => {
-    console.log(`[redis:${label}] connection closed`);
-  });
+  client.on("error", () => {}); // suppress, handled in initRedis
 
   return client;
 }
@@ -59,10 +45,13 @@ export async function initRedis(): Promise<RedisClients> {
   try {
     await Promise.all([pub.connect(), sub.connect(), client.connect()]);
     enabled = true;
-    console.log("[redis] all connections established");
-  } catch (err: any) {
-    console.warn("[redis] connection failed, realtime features disabled:", err.message);
+    console.log("[redis] connected — realtime features enabled");
+  } catch {
+    console.log("[redis] not available — running without realtime features");
     enabled = false;
+    pub.disconnect();
+    sub.disconnect();
+    client.disconnect();
   }
 
   clients = { pub, sub, client };
@@ -84,5 +73,4 @@ export async function shutdownRedis(): Promise<void> {
   ]);
   clients = null;
   enabled = false;
-  console.log("[redis] all connections closed");
 }

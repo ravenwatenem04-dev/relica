@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { Type } from "@sinclair/typebox";
+import { requireAuth } from "../plugins/auth.js";
 
 const IssueStatus = Type.Union([
   Type.Literal("todo"),
@@ -82,6 +83,7 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     "/api/issues",
     {
+      preHandler: requireAuth,
       schema: {
         tags: ["issues"],
         querystring: Type.Object({
@@ -127,6 +129,7 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     "/api/issues/:id",
     {
+      preHandler: requireAuth,
       schema: {
         tags: ["issues"],
         params: Type.Object({ id: Type.String() }),
@@ -153,6 +156,7 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     "/api/issues",
     {
+      preHandler: requireAuth,
       schema: {
         tags: ["issues"],
         body: CreateIssueBody,
@@ -181,6 +185,7 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.patch(
     "/api/issues/:id",
     {
+      preHandler: requireAuth,
       schema: {
         tags: ["issues"],
         params: Type.Object({ id: Type.String() }),
@@ -216,6 +221,7 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     "/api/issues/:id/status",
     {
+      preHandler: requireAuth,
       schema: {
         tags: ["issues"],
         params: Type.Object({ id: Type.String() }),
@@ -237,6 +243,7 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     "/api/issues/:id/assign",
     {
+      preHandler: requireAuth,
       schema: {
         tags: ["issues"],
         params: Type.Object({ id: Type.String() }),
@@ -259,6 +266,7 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     "/api/issues/:id/unassign",
     {
+      preHandler: requireAuth,
       schema: {
         tags: ["issues"],
         params: Type.Object({ id: Type.String() }),

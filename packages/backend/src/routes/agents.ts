@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { Type } from "@sinclair/typebox";
+import { requireAuth } from "../plugins/auth.js";
 
 const AgentStatus = Type.Union([
   Type.Literal("available"),
@@ -41,6 +42,7 @@ const agentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     "/api/agents",
     {
+      preHandler: requireAuth,
       schema: {
         tags: ["agents"],
         querystring: Type.Object({
@@ -89,6 +91,7 @@ const agentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     "/api/agents/:id",
     {
+      preHandler: requireAuth,
       schema: {
         tags: ["agents"],
         params: Type.Object({

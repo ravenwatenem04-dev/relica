@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multica Design Reference — Console v2</title>
+<style>
+:root {
+  --bg-primary: #0f0f1a;
+  --bg-secondary: #1a1a2e;
+  --bg-sidebar: #12122a;
+  --text-primary: #ffffff;
+  --text-secondary: #aaaaaa;
+  --text-muted: #888888;
+  --accent: #4dc8a2;
+  --accent-dark: #3a8a72;
+  --border: #2a2a4a;
+  --input-bg: #16213e;
+  --error: #e05555;
+  --warning: #c89b4d;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 2rem;
+}
+
+h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+h2 { font-size: 1.25rem; margin: 2rem 0 1rem; color: var(--accent); }
+h3 { font-size: 1rem; margin: 1rem 0 0.5rem; color: var(--text-secondary); }
+
+.section { margin-bottom: 2rem; }
+
+/* Color Swatches */
+.swatches { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0; }
+.swatch {
+  width: 80px; height: 80px; border-radius: var(--radius-lg);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0.5rem; font-size: 0.7rem; color: #fff;
+  border: 1px solid var(--border);
+}
+
+/* Buttons */
+.buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+.btn {
+  padding: 0.5rem 1rem; border-radius: var(--radius-md); font-size: 0.875rem;
+  font-family: var(--font); cursor: pointer; border: 1px solid var(--border);
+  font-weight: 500; transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--accent); color: var(--bg-primary); border-color: var(--accent); }
+.btn-secondary { background: var(--bg-secondary); color: var(--text-secondary); }
+.btn-ghost { background: transparent; color: var(--text-muted); border-color: transparent; }
+.btn-danger { background: transparent; color: var(--error); border-color: var(--error); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Badges */
+.badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.badge {
+  padding: 0.15rem 0.5rem; border-radius: var(--radius-sm); font-size: 0.75rem;
+  font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;
+}
+.badge-green { background: var(--accent); color: var(--bg-primary); }
+.badge-amber { background: var(--warning); color: var(--bg-primary); }
+.badge-red { background: var(--error); color: #fff; }
+.badge-gray { background: #333; color: var(--text-muted); }
+
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.card {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); padding: 1.25rem;
+}
+.card h3 { margin-top: 0; font-size: 0.875rem; color: var(--text-muted); }
+.card .value { font-size: 1.5rem; margin-top: 0.5rem; }
+
+/* Inputs */
+.input {
+  width: 100%; max-width: 400px; padding: 0.75rem;
+  background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); color: var(--text-primary);
+  font-family: var(--font); font-size: 1rem;
+}
+.input:focus { outline: none; border-color: var(--accent); }
+.input::placeholder { color: var(--text-muted); }
+
+/* Status Dots */
+.dots { display: flex; gap: 1rem; align-items: center; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot-green { background: var(--accent); animation: pulse 2s infinite; }
+.dot-amber { background: var(--warning); }
+.dot-red { background: var(--error); }
+.dot-gray { background: var(--text-muted); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* Table */
+.table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.table th { text-align: left; padding: 0.5rem; color: var(--text-muted); font-size: 0.8rem; border-bottom: 1px solid var(--border); }
+.table td { padding: 0.5rem; border-bottom: 1px solid var(--border); }
+.table tr:hover { background: rgba(255,255,255,0.02); }
+
+/* Activity Timeline */
+.timeline { display: flex; flex-direction: column; gap: 0.75rem; }
+.timeline-item {
+  display: flex; gap: 0.75rem; padding: 0.75rem;
+  background: var(--bg-secondary); border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+.timeline-item.agent { border-left: 3px solid var(--accent); }
+.timeline-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 600;
+}
+.timeline-avatar.human { background: #3a6bff; color: #fff; }
+.timeline-avatar.agent { background: var(--accent); color: var(--bg-primary); }
+.timeline-content { flex: 1; }
+.timeline-author { font-weight: 600; font-size: 0.85rem; }
+.timeline-time { font-size: 0.75rem; color: var(--text-muted); margin-left: 0.5rem; }
+.timeline-text { font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem; }
+
+/* Sidebar */
+.sidebar { width: 220px; background: var(--bg-sidebar); padding: 1.5rem 1rem; border-right: 1px solid var(--border); }
+.sidebar h2 { margin: 0 0 2rem; font-size: 1.1rem; }
+.nav-link {
+  display: block; padding: 0.5rem 0.75rem; border-radius: var(--radius-md);
+  color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+.nav-link:hover { background: var(--bg-secondary); color: var(--text-primary); }
+.nav-link.active { color: var(--accent); background: rgba(77,200,162,0.1); }
+</style>
+</head>
+<body>
+
+<h1>Multica Console v2 — Design Reference</h1>
+<p style="color: var(--text-muted); margin-bottom: 2rem;">Extracted from Multica.ai + app patterns. Use as reference during Phase 4 implementation.</p>
+
+<div class="section">
+  <h2>Color Palette</h2>
+  <div class="swatches">
+    <div class="swatch" style="background:#0f0f1a">bg-primary</div>
+    <div class="swatch" style="background:#1a1a2e">bg-secondary</div>
+    <div class="swatch" style="background:#12122a">bg-sidebar</div>
+    <div class="swatch" style="background:#4dc8a2">accent</div>
+    <div class="swatch" style="background:#2a2a4a">border</div>
+    <div class="swatch" style="background:#16213e">input-bg</div>
+    <div class="swatch" style="background:#e05555">error</div>
+    <div class="swatch" style="background:#c89b4d">warning</div>
+    <div class="swatch" style="background:#888888">muted</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Buttons</h2>
+  <div class="buttons">
+    <button class="btn btn-primary">Primary Action</button>
+    <button class="btn btn-secondary">Secondary</button>
+    <button class="btn btn-ghost">Ghost</button>
+    <button class="btn btn-danger">Danger</button>
+    <button class="btn btn-primary" disabled>Disabled</button>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Status Badges & Dots</h2>
+  <div class="badges" style="margin-bottom:1rem">
+    <span class="badge badge-green">Running</span>
+    <span class="badge badge-amber">In Review</span>
+    <span class="badge badge-red">Blocked</span>
+    <span class="badge badge-gray">Disabled</span>
+  </div>
+  <div class="dots">
+    <span class="dot dot-green"></span> Running/Connected
+    <span class="dot dot-amber"></span> Pending
+    <span class="dot dot-red"></span> Blocked/Error
+    <span class="dot dot-gray"></span> Available/Idle
+  </div>
+</div>
+
+<div class="section">
+  <h2>Dashboard Cards</h2>
+  <div class="cards">
+    <div class="card"><h3>Agents</h3><div class="value">4</div></div>
+    <div class="card"><h3>Active Issues</h3><div class="value">12</div></div>
+    <div class="card"><h3>Needs Review</h3><div class="value">3</div></div>
+    <div class="card"><h3>Est. Cost</h3><div class="value">$2.45</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Input</h2>
+  <input class="input" placeholder="Type something..." value="">
+</div>
+
+<div class="section">
+  <h2>Table (Issue List)</h2>
+  <table class="table">
+    <thead><tr><th>Status</th><th>Title</th><th>Priority</th><th>Assignee</th><th>Updated</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-green">In Progress</span></td>
+        <td>Refactor API error handling middleware</td>
+        <td>Medium</td>
+        <td>Claude</td>
+        <td style="color:var(--text-muted)">2 min ago</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-amber">In Review</span></td>
+        <td>Add user analytics dashboard</td>
+        <td>High</td>
+        <td>—</td>
+        <td style="color:var(--text-muted)">1 hour ago</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-gray">Todo</span></td>
+        <td>Update documentation for v2</td>
+        <td>Low</td>
+        <td>Unassigned</td>
+        <td style="color:var(--text-muted)">3 hours ago</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h2>Activity Timeline (Comments)</h2>
+  <div class="timeline">
+    <div class="timeline-item agent">
+      <div class="timeline-avatar agent">C</div>
+      <div class="timeline-content">
+        <span class="timeline-author">Claude <span class="badge badge-green" style="font-size:0.65rem;vertical-align:middle">agent</span></span>
+        <span class="timeline-time">6 min ago</span>
+        <div class="timeline-text">I've standardized error responses across 14 handlers. PR #43 is ready for review.</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-avatar human">AR</div>
+      <div class="timeline-content">
+        <span class="timeline-author">Alex Rivera <span class="badge badge-gray" style="font-size:0.65rem;vertical-align:middle">human</span></span>
+        <span class="timeline-time">10 min ago</span>
+        <div class="timeline-text">The current error responses are inconsistent. Need a unified format with error codes.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Sidebar Navigation</h2>
+  <div class="sidebar">
+    <h2>Multica Console</h2>
+    <a class="nav-link active" href="#">Dashboard</a>
+    <a class="nav-link" href="#">Agents</a>
+    <a class="nav-link" href="#">Issues</a>
+    <a class="nav-link" href="#">Reviews</a>
+    <a class="nav-link" href="#">Usage</a>
+  </div>
+</div>
+
+</body>
+</html>

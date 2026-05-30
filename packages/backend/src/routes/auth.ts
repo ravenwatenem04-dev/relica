@@ -20,6 +20,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
     (request.session as any).token = token;
     (request.session as any).user = user;
+    (request.session as any).workspaceId = user.workspace_id || "";
 
     return { user, message: "Signed in" };
   });
