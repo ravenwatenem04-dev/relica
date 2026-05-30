@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const { data: me, isError, isLoading } = useQuery({
     queryKey: ["me"],
@@ -15,11 +16,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!res.ok) throw new Error("Not authenticated");
       return res.json();
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
-    if (isError) router.push("/");
-  }, [isError, router]);
+    if (isError && pathname !== "/") router.push("/");
+  }, [isError, router, pathname]);
 
   if (isLoading) {
     return (
