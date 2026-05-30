@@ -10,20 +10,21 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@multica-console/shared": "workspace:*",
-    "fastify": "^5.0.0",
-    "@fastify/cors": "^10.0.0",
     "@fastify/cookie": "^10.0.0",
+    "@fastify/cors": "^10.0.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@fastify/session": "^11.0.0",
+    "@multica-console/shared": "workspace:*",
     "connect-redis": "^8.0.0",
+    "fastify": "^5.0.0",
     "ioredis": "^5.4.0",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
-    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0",
     "tsup": "^8.3.0",
-    "vitest": "^2.1.0",
-    "@types/node": "^22.0.0"
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
   }
 }

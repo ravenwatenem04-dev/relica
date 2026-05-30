@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import crypto from "crypto";
 import { config } from "./config.js";
 import { initRedis, shutdownRedis, isRedisEnabled } from "./lib/redis.js";
@@ -33,6 +34,12 @@ await app.register(cors, {
   credentials: true,
 });
 
+await app.register(rateLimit, {
+  global: false,
+  max: 100,
+  timeWindow: "1 minute",
+});
+
 app.decorateRequest("session", null);
 
 app.addHook("onRequest", async (request, reply) => {
@@ -55,6 +62,16 @@ app.addHook("onRequest", async (request, reply) => {
 
   const cookieValue = `multica_session=${sessionId}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800`;
   reply.header("Set-Cookie", cookieValue);
+});
+
+app.setErrorHandler(async (error: any, request, reply) => {
+  request.log.error(error, "Unhandled error");
+  if (reply.raw.headersSent) {
+    return reply.raw.end();
+  }
+  const statusCode = error.statusCode ?? 500;
+  const message = statusCode === 500 ? "Internal server error" : error.message;
+  return reply.code(statusCode).send({ error: message });
 });
 
 await app.register(authPlugin);

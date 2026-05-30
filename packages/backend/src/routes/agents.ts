@@ -1,5 +1,6 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { Type } from "@sinclair/typebox";
+import { MulticaApiError } from "../lib/multica-client.js";
 
 const AgentStatus = Type.Union([
   Type.Literal("available"),
@@ -37,6 +38,28 @@ const statusOrder: Record<string, number> = {
   disabled: 3,
 };
 
+function mapAgent(agent: any) {
+  return {
+    id: agent.id,
+    displayName: agent.display_name ?? agent.name ?? agent.id,
+    status: agent.status,
+    model: agent.model ?? "",
+    currentTask: agent.current_task
+      ? {
+          id: agent.current_task.id,
+          title: agent.current_task.title,
+        }
+      : null,
+    capabilities: Array.isArray(agent.capabilities) ? agent.capabilities : [],
+  };
+}
+
+async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
+  if (!(request as any).multicaClient) {
+    return reply.code(401).send({ error: "Not authenticated" });
+  }
+}
+
 const agentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     "/api/agents",
@@ -51,38 +74,38 @@ const agentRoutes: FastifyPluginAsync = async (fastify) => {
           200: AgentListResponse,
         },
       },
+      preHandler: [requireAuth],
     },
     async (request, reply) => {
-      const limit = request.query.limit ?? 50;
-      const offset = request.query.offset ?? 0;
-      const workspaceId = request.session.workspaceId;
+      try {
+        const workspaceId = (request.session as any)?.workspaceId;
+        const limit = request.query.limit ?? 50;
+        const offset = request.query.offset ?? 0;
 
-      const result = await request.multicaClient.agents.list({
-        workspace_id: workspaceId,
-        limit,
-        offset,
-      });
+        let agentsData: any;
+        try {
+          agentsData = await request.multicaClient.agents.list(workspaceId);
+        } catch (listErr: unknown) {
+          if (listErr instanceof MulticaApiError) {
+            return reply.code(listErr.status).send({ error: listErr.message });
+          }
+          throw listErr;
+        }
 
-      const agents = result.agents
-        .map((agent: any) => ({
-          id: agent.id,
-          displayName: agent.display_name ?? agent.name ?? agent.id,
-          status: agent.status,
-          model: agent.model ?? "",
-          currentTask: agent.current_task
-            ? {
-                id: agent.current_task.id,
-                title: agent.current_task.title,
-              }
-            : null,
-          capabilities: Array.isArray(agent.capabilities) ? agent.capabilities : [],
-        }))
-        .sort((a: any, b: any) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99));
+        const agentsList = Array.isArray(agentsData) ? agentsData : (agentsData?.agents ?? []);
+        const agents = agentsList
+          .slice(offset, offset + limit)
+          .map(mapAgent)
+          .sort((a: any, b: any) => (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99));
 
-      return reply.send({
-        agents,
-        total: result.total ?? agents.length,
-      });
+        return reply.send({
+          agents,
+          total: agentsData?.total ?? agentsList.length,
+        });
+      } catch (err: unknown) {
+        request.log.error(err, "Failed to list agents");
+        return reply.code(500).send({ error: "Internal server error" });
+      }
     }
   );
 
@@ -98,33 +121,21 @@ const agentRoutes: FastifyPluginAsync = async (fastify) => {
           200: AgentDetailResponse,
         },
       },
+      preHandler: [requireAuth],
     },
     async (request, reply) => {
-      const workspaceId = request.session.workspaceId;
-
       try {
-        const agent: any = await request.multicaClient.agents.get(request.params.id, {
-          workspace_id: workspaceId,
-        });
-
-        return reply.send({
-          id: agent.id,
-          displayName: agent.display_name ?? agent.name ?? agent.id,
-          status: agent.status,
-          model: agent.model ?? "",
-          currentTask: agent.current_task
-            ? {
-                id: agent.current_task.id,
-                title: agent.current_task.title,
-              }
-            : null,
-          capabilities: Array.isArray(agent.capabilities) ? agent.capabilities : [],
-        });
-      } catch (error: any) {
-        if (error?.statusCode === 404 || error?.status === 404) {
-          return reply.code(404).send({ message: "Agent not found" });
+        const agent: any = await request.multicaClient.agents.get(request.params.id);
+        return reply.send(mapAgent(agent));
+      } catch (err: unknown) {
+        if (err instanceof MulticaApiError) {
+          if (err.status === 404) {
+            return reply.code(404).send({ error: "Agent not found" });
+          }
+          return reply.code(err.status).send({ error: err.message });
         }
-        throw error;
+        request.log.error(err, "Failed to get agent");
+        return reply.code(500).send({ error: "Internal server error" });
       }
     }
   );

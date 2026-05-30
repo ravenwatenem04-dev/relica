@@ -1,4 +1,5 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { MulticaApiError } from "../lib/multica-client.js";
 
 interface Comment {
   id: string;
@@ -22,64 +23,160 @@ function asArray<T>(arr: T[] | null | undefined): T[] {
   return Array.isArray(arr) ? arr : [];
 }
 
+async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
+  if (!(request as any).multicaClient) {
+    return reply.code(401).send({ error: "Not authenticated" });
+  }
+}
+
+function mapComment(c: any): Comment {
+  return {
+    id: c.id,
+    issueId: c.issue_id ?? c.issueId,
+    parentId: c.parent_id ?? c.parentId ?? null,
+    authorType: c.author_type ?? c.authorType ?? "member",
+    authorId: c.author_id ?? c.authorId ?? "",
+    authorName: c.author_name ?? c.authorName ?? "",
+    content: c.content ?? "",
+    attachments: Array.isArray(c.attachments) ? c.attachments : [],
+    createdAt: c.created_at ?? c.createdAt ?? "",
+    updatedAt: c.updated_at ?? c.updatedAt ?? "",
+  };
+}
+
 export default async function commentsRoutes(app: FastifyInstance) {
-  app.get("/api/issues/:issueId/comments", async (request: FastifyRequest<{ Params: { issueId: string }; Querystring: { thread?: string; recent?: string; limit?: string; offset?: string } }>) => {
-    const multicaClient = (request as any).multicaClient;
-    const { issueId } = request.params;
+  app.get(
+    "/api/issues/:issueId/comments",
+    {
+      preHandler: [requireAuth],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const client = (request as any).multicaClient;
+        const issueId = (request.params as any).issueId;
 
-    const comments = asArray<Comment>(
-      await (multicaClient?.issues?.comments?.list ?? multicaClient?.comments?.list)?.(issueId)
-    );
+        const commentsData = await client.comments.list(issueId);
+        const commentsList = Array.isArray(commentsData) ? commentsData : (commentsData?.comments ?? []);
+        const comments = commentsList.map(mapComment);
 
-    return { comments, total: comments.length };
-  });
+        return reply.send({ comments, total: comments.length });
+      } catch (err: unknown) {
+        if (err instanceof MulticaApiError) {
+          if (err.status === 404) {
+            return reply.code(404).send({ error: "Issue not found" });
+          }
+          return reply.code(err.status).send({ error: err.message });
+        }
+        request.log.error(err, "Failed to list comments");
+        return reply.code(500).send({ error: "Internal server error" });
+      }
+    }
+  );
 
-  app.post("/api/issues/:issueId/comments", async (request: FastifyRequest<{ Params: { issueId: string }; Body: { content: string; parentId?: string } }>) => {
-    const multicaClient = (request as any).multicaClient;
-    const { issueId } = request.params;
-    const { content, parentId } = request.body;
+  app.post(
+    "/api/issues/:issueId/comments",
+    {
+      preHandler: [requireAuth],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const client = (request as any).multicaClient;
+        const issueId = (request.params as any).issueId;
+        const body = request.body as any;
+        const content = body?.content;
+        const parentId = body?.parentId;
 
-    if (!content) return { statusCode: 400, error: "content is required" };
+        if (!content || content.trim().length === 0) {
+          return reply.code(400).send({ error: "Content is required" });
+        }
 
-    const params: any = { content };
-    if (parentId) params.parent_id = parentId;
+        const params: any = { content };
+        if (parentId) params.parent_id = parentId;
 
-    const comment = await (multicaClient?.issues?.comments?.add ?? multicaClient?.comments?.add)?.(issueId, params);
-    return { statusCode: 201, ...comment };
-  });
+        const comment = await client.comments.add(issueId, params);
+        return reply.code(201).send(mapComment(comment));
+      } catch (err: unknown) {
+        if (err instanceof MulticaApiError) {
+          if (err.status === 404) {
+            return reply.code(404).send({ error: "Issue not found" });
+          }
+          return reply.code(err.status).send({ error: err.message });
+        }
+        request.log.error(err, "Failed to add comment");
+        return reply.code(500).send({ error: "Internal server error" });
+      }
+    }
+  );
 
-  app.get("/api/issues/:issueId/comments/recent", async (request: FastifyRequest<{ Params: { issueId: string }; Querystring: { count?: string } }>) => {
-    const multicaClient = (request as any).multicaClient;
-    const { issueId } = request.params;
-    const count = parseInt(request.query.count ?? "20", 10);
+  app.get(
+    "/api/issues/:issueId/comments/recent",
+    {
+      preHandler: [requireAuth],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const client = (request as any).multicaClient;
+        const issueId = (request.params as any).issueId;
+        const count = parseInt((request.query as any).count ?? "20", 10);
 
-    const comments = asArray<Comment>(
-      await (multicaClient?.issues?.comments?.list ?? multicaClient?.comments?.list)?.(issueId)
-    );
+        const commentsData = await client.comments.list(issueId);
+        const commentsList = Array.isArray(commentsData) ? commentsData : (commentsData?.comments ?? []);
+        const comments = commentsList.map(mapComment);
 
-    const roots = comments.filter((c) => !c.parentId);
-    const threads: CommentThread[] = roots.map((root) => ({
-      root,
-      replies: comments.filter((c) => c.parentId === root.id),
-    }));
+        const roots = comments.filter((c: Comment) => !c.parentId);
+        const threads: CommentThread[] = roots.slice(0, count).map((root: Comment) => ({
+          root,
+          replies: comments.filter((c: Comment) => c.parentId === root.id),
+        }));
 
-    return { threads };
-  });
+        return reply.send({ threads });
+      } catch (err: unknown) {
+        if (err instanceof MulticaApiError) {
+          if (err.status === 404) {
+            return reply.code(404).send({ error: "Issue not found" });
+          }
+          return reply.code(err.status).send({ error: err.message });
+        }
+        request.log.error(err, "Failed to list recent comments");
+        return reply.code(500).send({ error: "Internal server error" });
+      }
+    }
+  );
 
-  app.get("/api/issues/:issueId/comments/:commentId/thread", async (request: FastifyRequest<{ Params: { issueId: string; commentId: string } }>) => {
-    const multicaClient = (request as any).multicaClient;
-    const { issueId, commentId } = request.params;
+  app.get(
+    "/api/issues/:issueId/comments/:commentId/thread",
+    {
+      preHandler: [requireAuth],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const client = (request as any).multicaClient;
+        const issueId = (request.params as any).issueId;
+        const commentId = (request.params as any).commentId;
 
-    const comments = asArray<Comment>(
-      await (multicaClient?.issues?.comments?.list ?? multicaClient?.comments?.list)?.(issueId)
-    );
+        const commentsData = await client.comments.list(issueId);
+        const commentsList = Array.isArray(commentsData) ? commentsData : (commentsData?.comments ?? []);
+        const comments = commentsList.map(mapComment);
 
-    const root = comments.find((c) => c.id === commentId);
-    if (!root) return { statusCode: 404, error: "Comment not found" };
+        const root = comments.find((c: Comment) => c.id === commentId);
+        if (!root) {
+          return reply.code(404).send({ error: "Comment not found" });
+        }
 
-    return {
-      root,
-      replies: comments.filter((c) => c.parentId === commentId),
-    };
-  });
+        return reply.send({
+          root,
+          replies: comments.filter((c: Comment) => c.parentId === commentId),
+        });
+      } catch (err: unknown) {
+        if (err instanceof MulticaApiError) {
+          if (err.status === 404) {
+            return reply.code(404).send({ error: "Issue not found" });
+          }
+          return reply.code(err.status).send({ error: err.message });
+        }
+        request.log.error(err, "Failed to get comment thread");
+        return reply.code(500).send({ error: "Internal server error" });
+      }
+    }
+  );
 }

@@ -1,53 +1,92 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
-interface WorkspaceUsageSummary {
-  period: { from: string; to: string };
-  totalRuns: number;
-  successfulRuns: number;
-  failedRuns: number;
-  totalTokens: { input: number; output: number } | null;
-  estimatedCost: number | null;
-  agentBreakdown: { agentId: string; agentName: string; runCount: number; successRate: number; totalTokens: { input: number; output: number } | null; estimatedCost: number | null }[];
-  modelBreakdown: { model: string; runCount: number; totalTokens: { input: number; output: number } | null; estimatedCost: number | null }[];
-  dailyTrend: { date: string; runCount: number; cost: number | null }[];
-  dataAvailable: boolean;
+async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
+  if (!(request as any).multicaClient) {
+    return reply.code(401).send({ error: "Not authenticated" });
+  }
 }
 
 export default async function usageRoutes(app: FastifyInstance) {
-  app.get("/api/usage/summary", async (request: FastifyRequest<{ Querystring: { period?: string } }>) => {
-    const period = request.query.period ?? "30d";
-    const aggregator = (app as any).usageAggregator;
+  app.get(
+    "/api/usage/summary",
+    {
+      preHandler: [requireAuth],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const period = (request.query as any).period ?? "30d";
+        if (!["7d", "30d", "90d"].includes(period)) {
+          return reply.code(400).send({ error: "Period must be one of: 7d, 30d, 90d" });
+        }
 
-    if (!aggregator) {
-      return {
-        totalRuns: 0, successfulRuns: 0, failedRuns: 0,
-        totalTokens: null, estimatedCost: null,
-        agentBreakdown: [], modelBreakdown: [], dailyTrend: [],
-        period: { from: "", to: "" }, dataAvailable: false,
-      };
+        const aggregator = (app as any).usageAggregator;
+        if (!aggregator) {
+          return reply.send({
+            period: { from: "", to: "" },
+            totalRuns: 0,
+            successfulRuns: 0,
+            failedRuns: 0,
+            totalTokens: null,
+            estimatedCost: null,
+            agentBreakdown: [],
+            modelBreakdown: [],
+            dailyTrend: [],
+            dataAvailable: false,
+          });
+        }
+
+        const workspaceId = (request.session as any)?.workspaceId ?? "";
+        const summary = await aggregator.getSummary(workspaceId, period);
+        return reply.send(summary);
+      } catch (err: unknown) {
+        request.log.error(err, "Failed to get usage summary");
+        return reply.code(500).send({ error: "Internal server error" });
+      }
     }
+  );
 
-    return await aggregator.getSummary("", period);
-  });
+  app.get(
+    "/api/usage/agents",
+    {
+      preHandler: [requireAuth],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const period = (request.query as any).period ?? "30d";
+        const limit = parseInt((request.query as any).limit ?? "10", 10);
+        const aggregator = (app as any).usageAggregator;
 
-  app.get("/api/usage/agents", async (request: FastifyRequest<{ Querystring: { period?: string; limit?: string } }>) => {
-    const period = request.query.period ?? "30d";
-    const limit = parseInt(request.query.limit ?? "10", 10);
-    const aggregator = (app as any).usageAggregator;
+        if (!aggregator) return reply.send({ agents: [] });
 
-    if (!aggregator) return { agents: [] };
+        const workspaceId = (request.session as any)?.workspaceId ?? "";
+        const summary = await aggregator.getSummary(workspaceId, period);
+        return reply.send({ agents: summary.agentBreakdown.slice(0, limit) });
+      } catch (err: unknown) {
+        request.log.error(err, "Failed to get usage agents");
+        return reply.code(500).send({ error: "Internal server error" });
+      }
+    }
+  );
 
-    const summary = await aggregator.getSummary("", period);
-    return { agents: summary.agentBreakdown.slice(0, limit) };
-  });
+  app.get(
+    "/api/usage/trends",
+    {
+      preHandler: [requireAuth],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const period = (request.query as any).period ?? "30d";
+        const aggregator = (app as any).usageAggregator;
 
-  app.get("/api/usage/trends", async (request: FastifyRequest<{ Querystring: { period?: string } }>) => {
-    const period = request.query.period ?? "30d";
-    const aggregator = (app as any).usageAggregator;
+        if (!aggregator) return reply.send({ daily: [] });
 
-    if (!aggregator) return { daily: [] };
-
-    const summary = await aggregator.getSummary("", period);
-    return { daily: summary.dailyTrend };
-  });
+        const workspaceId = (request.session as any)?.workspaceId ?? "";
+        const summary = await aggregator.getSummary(workspaceId, period);
+        return reply.send({ daily: summary.dailyTrend });
+      } catch (err: unknown) {
+        request.log.error(err, "Failed to get usage trends");
+        return reply.code(500).send({ error: "Internal server error" });
+      }
+    }
+  );
 }
