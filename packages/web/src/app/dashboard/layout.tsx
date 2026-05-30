@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { data: me, isError, isLoading } = useQuery({
     queryKey: ["me"],
@@ -15,6 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!res.ok) throw new Error("Not authenticated");
       return res.json();
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard/usage" style={navStyle}>Usage</Link>
         </nav>
         <div style={{ position: "absolute", bottom: "1.5rem", left: "1rem", right: "1rem" }}>
-          <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); router.push("/"); }}
+          <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); queryClient.clear(); router.push("/"); }}
             style={{ width: "100%", padding: "0.5rem", background: "transparent", border: "1px solid #3a3a5a", borderRadius: "6px", color: "#888", cursor: "pointer", fontSize: "0.8rem" }}>
             Sign Out
           </button>
