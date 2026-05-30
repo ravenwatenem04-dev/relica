@@ -33,7 +33,7 @@ await app.register(cors, {
   credentials: true,
 });
 
-app.decorateRequest("session", null);
+app.decorateRequest("session", null as any);
 
 app.addHook("onRequest", async (request, reply) => {
   const cookieHeader = request.headers.cookie || "";
@@ -97,13 +97,13 @@ try {
 
   (app as any).usageAggregator = new UsageAggregator({
     multicaClient: {},
-    redis: redisClients.data,
+    redis: redisClients.client,
   });
 
   if (isRedisEnabled()) {
     await app.register(
       async (instance) => {
-        await instance.register(eventsRoutes, {
+        await instance.register(eventsRoutes as any, {
           redisSub: redisClients.sub,
           redisClient: redisClients.client,
         });

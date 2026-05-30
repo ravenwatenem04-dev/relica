@@ -1,11 +1,13 @@
 export class MulticaApiError extends Error {
   status: number;
+  statusCode: number;
   code: string;
 
   constructor(status: number, code: string, message: string) {
     super(message);
     this.name = "MulticaApiError";
     this.status = status;
+    this.statusCode = status;
     this.code = code;
   }
 }
@@ -19,17 +21,29 @@ export class MulticaClient {
     this.token = token;
   }
 
-  private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${path}`;
+  private async request<T>(path: string, options: RequestInit & { params?: Record<string, unknown> } = {}): Promise<T> {
+    let url = `${this.baseUrl}${path}`;
+    if (options.params) {
+      const qs = new URLSearchParams();
+      for (const [key, value] of Object.entries(options.params)) {
+        if (value !== undefined && value !== null && value !== "") {
+          qs.set(key, String(value));
+        }
+      }
+      const query = qs.toString();
+      if (query) url += `?${query}`;
+    }
+
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.token}`,
       "Content-Type": "application/json",
       ...((options.headers as Record<string, string>) || {}),
     };
+    const { params: _params, ...fetchOptions } = options;
 
     let response: Response;
     try {
-      response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(30000) });
+      response = await fetch(url, { ...fetchOptions, headers, signal: AbortSignal.timeout(30000) });
     } catch (err: any) {
       if (err.name === "TimeoutError") {
         throw new MulticaApiError(0, "timeout", "Request timed out after 30s");
@@ -39,7 +53,7 @@ export class MulticaClient {
 
     if (response.status >= 500 && response.status < 600) {
       await new Promise((r) => setTimeout(r, 1000));
-      response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(30000) });
+      response = await fetch(url, { ...fetchOptions, headers, signal: AbortSignal.timeout(30000) });
     }
 
     if (!response.ok) {
@@ -72,24 +86,21 @@ export class MulticaClient {
   };
 
   agents = {
-    list: (workspaceId?: string) =>
-      this.request<any[]>(workspaceId ? `/api/agents?workspace_id=${encodeURIComponent(workspaceId)}` : "/api/agents"),
-    get: (id: string) => this.request<any>(`/api/agents/${encodeURIComponent(id)}`),
+    list: (params?: Record<string, unknown> | string) => {
+      if (typeof params === "string") {
+        return this.request<any>("/api/agents", { params: { workspace_id: params } });
+      }
+      return this.request<any>("/api/agents", { params });
+    },
+    get: (id: string, params?: Record<string, unknown>) =>
+      this.request<any>(`/api/agents/${encodeURIComponent(id)}`, { params }),
   };
 
   issues = {
-    list: (params?: { workspace_id?: string; status?: string; priority?: string; project_id?: string; search?: string; limit?: number; offset?: number }) => {
-      const qs = new URLSearchParams();
-      if (params?.workspace_id) qs.set("workspace_id", params.workspace_id);
-      if (params?.status) qs.set("status", params.status);
-      if (params?.priority) qs.set("priority", params.priority);
-      if (params?.project_id) qs.set("project_id", params.project_id);
-      if (params?.search) qs.set("search", params.search);
-      if (params?.limit) qs.set("limit", String(params.limit));
-      if (params?.offset) qs.set("offset", String(params.offset));
-      return this.request<any>(`/api/issues?${qs.toString()}`);
-    },
-    get: (id: string) => this.request<any>(`/api/issues/${encodeURIComponent(id)}`),
+    list: (params?: Record<string, unknown>) =>
+      this.request<any>("/api/issues", { params }),
+    get: (id: string, params?: Record<string, unknown>) =>
+      this.request<any>(`/api/issues/${encodeURIComponent(id)}`, { params }),
     create: (data: any) => this.request<any>("/api/issues", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) =>
       this.request<any>(`/api/issues/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(data) }),

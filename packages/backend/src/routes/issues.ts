@@ -1,5 +1,6 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { Type } from "@sinclair/typebox";
+import { MulticaApiError } from "../lib/multica-client.js";
 
 const IssueStatus = Type.Union([
   Type.Literal("todo"),
@@ -78,6 +79,23 @@ const mapIssue = (issue: any) => ({
   updatedAt: issue.updated_at,
 });
 
+async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
+  if (request.multicaClient === null || !(request.session as any).workspaceId) {
+    return reply.code(401).send({ message: "Authentication required" });
+  }
+}
+
+function sendApiError(reply: FastifyReply, error: unknown) {
+  if (error instanceof MulticaApiError) {
+    return reply.code(error.statusCode || 500).send({ error: error.message });
+  }
+  throw error;
+}
+
+function workspaceId(request: FastifyRequest) {
+  return (request.session as any).workspaceId;
+}
+
 const issuesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get(
     "/api/issues",
@@ -97,30 +115,37 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
           200: IssueListResponse,
         },
       },
+      preHandler: [requireAuth],
     },
     async (request, reply) => {
-      const limit = request.query.limit ?? 50;
-      const offset = request.query.offset ?? 0;
-      const params = {
-        workspace_id: request.session.workspaceId,
-        status: request.query.status,
-        priority: request.query.priority,
-        project_id: request.query.project_id,
-        assignee_id: request.query.assignee_id,
-        search: request.query.search,
-        sort: "updated_at:desc",
-        limit,
-        offset,
-      };
+      try {
+        const query = request.query as Record<string, any>;
+        const limit = query.limit ?? 50;
+        const offset = query.offset ?? 0;
+        const params = {
+          workspace_id: workspaceId(request),
+          status: query.status,
+          priority: query.priority,
+          project_id: query.project_id,
+          assignee_id: query.assignee_id,
+          search: query.search,
+          sort: "updated_at:desc",
+          limit,
+          offset,
+        };
 
-      const result = await request.multicaClient.issues.list(params);
-      const issues = (result.issues ?? []).map(mapIssue);
+        const result = await request.multicaClient.issues.list(params);
+        const issueList = Array.isArray(result) ? result : (result.issues ?? []);
+        const issues = issueList.map(mapIssue);
 
-      return reply.send({
-        issues,
-        total: result.total ?? issues.length,
-        hasMore: offset + issues.length < (result.total ?? issues.length),
-      });
+        return reply.send({
+          issues,
+          total: result.total ?? issues.length,
+          hasMore: offset + issues.length < (result.total ?? issues.length),
+        });
+      } catch (error) {
+        return sendApiError(reply, error);
+      }
     }
   );
 
@@ -134,18 +159,17 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
           200: IssueResponse,
         },
       },
+      preHandler: [requireAuth],
     },
     async (request, reply) => {
       try {
-        const issue = await request.multicaClient.issues.get(request.params.id, {
-          workspace_id: request.session.workspaceId,
+        const params = request.params as { id: string };
+        const issue = await request.multicaClient.issues.get(params.id, {
+          workspace_id: workspaceId(request),
         });
         return reply.send(mapIssue(issue));
       } catch (error: any) {
-        if (error?.statusCode === 404 || error?.status === 404) {
-          return reply.code(404).send({ message: "Issue not found" });
-        }
-        throw error;
+        return sendApiError(reply, error);
       }
     }
   );
@@ -160,21 +184,26 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
           201: IssueResponse,
         },
       },
+      preHandler: [requireAuth],
     },
     async (request, reply) => {
-      const body = request.body;
-      const issue = await request.multicaClient.issues.create({
-        workspace_id: request.session.workspaceId,
-        title: body.title,
-        description: body.description,
-        priority: body.priority,
-        project_id: body.projectId,
-        assignee_id: body.assigneeId,
-        assignee_type: body.assigneeId ? "agent" : undefined,
-        parent_issue_id: body.parentIssueId,
-      });
+      try {
+        const body = request.body as Record<string, any>;
+        const issue = await request.multicaClient.issues.create({
+          workspace_id: workspaceId(request),
+          title: body.title,
+          description: body.description,
+          priority: body.priority,
+          project_id: body.projectId,
+          assignee_id: body.assigneeId,
+          assignee_type: body.assigneeId ? "agent" : undefined,
+          parent_issue_id: body.parentIssueId,
+        });
 
-      return reply.code(201).send(mapIssue(issue));
+        return reply.code(201).send(mapIssue(issue));
+      } catch (error) {
+        return sendApiError(reply, error);
+      }
     }
   );
 
@@ -189,27 +218,33 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
           200: IssueResponse,
         },
       },
+      preHandler: [requireAuth],
     },
     async (request, reply) => {
-      const body = request.body;
-      const payload: Record<string, unknown> = {};
-      if (body.title !== undefined) payload.title = body.title;
-      if (body.description !== undefined) payload.description = body.description;
-      if (body.priority !== undefined) payload.priority = body.priority;
-      if (body.status !== undefined) payload.status = body.status;
-      if (body.projectId !== undefined) payload.project_id = body.projectId;
-      if (body.assigneeId !== undefined) {
-        payload.assignee_id = body.assigneeId;
-        payload.assignee_type = body.assigneeId ? "agent" : null;
+      try {
+        const params = request.params as { id: string };
+        const body = request.body as Record<string, any>;
+        const payload: Record<string, unknown> = {};
+        if (body.title !== undefined) payload.title = body.title;
+        if (body.description !== undefined) payload.description = body.description;
+        if (body.priority !== undefined) payload.priority = body.priority;
+        if (body.status !== undefined) payload.status = body.status;
+        if (body.projectId !== undefined) payload.project_id = body.projectId;
+        if (body.assigneeId !== undefined) {
+          payload.assignee_id = body.assigneeId;
+          payload.assignee_type = body.assigneeId ? "agent" : null;
+        }
+        if (body.dueDate !== undefined) payload.due_date = body.dueDate;
+
+        const issue = await request.multicaClient.issues.update(params.id, {
+          workspace_id: workspaceId(request),
+          ...payload,
+        });
+
+        return reply.send(mapIssue(issue));
+      } catch (error) {
+        return sendApiError(reply, error);
       }
-      if (body.dueDate !== undefined) payload.due_date = body.dueDate;
-
-      const issue = await request.multicaClient.issues.update(request.params.id, {
-        workspace_id: request.session.workspaceId,
-        ...payload,
-      });
-
-      return reply.send(mapIssue(issue));
     }
   );
 
@@ -224,13 +259,20 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
           200: IssueResponse,
         },
       },
+      preHandler: [requireAuth],
     },
     async (request, reply) => {
-      const issue = await request.multicaClient.issues.update(request.params.id, {
-        workspace_id: request.session.workspaceId,
-        status: request.body.status,
-      });
-      return reply.send(mapIssue(issue));
+      try {
+        const params = request.params as { id: string };
+        const body = request.body as { status: string };
+        const issue = await request.multicaClient.issues.update(params.id, {
+          workspace_id: workspaceId(request),
+          status: body.status,
+        });
+        return reply.send(mapIssue(issue));
+      } catch (error) {
+        return sendApiError(reply, error);
+      }
     }
   );
 
@@ -245,14 +287,21 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
           200: IssueResponse,
         },
       },
+      preHandler: [requireAuth],
     },
     async (request, reply) => {
-      const issue = await request.multicaClient.issues.update(request.params.id, {
-        workspace_id: request.session.workspaceId,
-        assignee_id: request.body.agentId,
-        assignee_type: "agent",
-      });
-      return reply.send(mapIssue(issue));
+      try {
+        const params = request.params as { id: string };
+        const body = request.body as { agentId: string };
+        const issue = await request.multicaClient.issues.update(params.id, {
+          workspace_id: workspaceId(request),
+          assignee_id: body.agentId,
+          assignee_type: "agent",
+        });
+        return reply.send(mapIssue(issue));
+      } catch (error) {
+        return sendApiError(reply, error);
+      }
     }
   );
 
@@ -266,14 +315,20 @@ const issuesRoutes: FastifyPluginAsync = async (fastify) => {
           200: IssueResponse,
         },
       },
+      preHandler: [requireAuth],
     },
     async (request, reply) => {
-      const issue = await request.multicaClient.issues.update(request.params.id, {
-        workspace_id: request.session.workspaceId,
-        assignee_id: null,
-        assignee_type: null,
-      });
-      return reply.send(mapIssue(issue));
+      try {
+        const params = request.params as { id: string };
+        const issue = await request.multicaClient.issues.update(params.id, {
+          workspace_id: workspaceId(request),
+          assignee_id: null,
+          assignee_type: null,
+        });
+        return reply.send(mapIssue(issue));
+      } catch (error) {
+        return sendApiError(reply, error);
+      }
     }
   );
 };

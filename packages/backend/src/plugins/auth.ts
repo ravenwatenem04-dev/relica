@@ -1,8 +1,9 @@
 import type { FastifyInstance } from "fastify";
+import fp from "fastify-plugin";
 import { MulticaClient } from "../lib/multica-client.js";
 import { config } from "../config.js";
 
-export default async function authPlugin(app: FastifyInstance) {
+async function authPlugin(app: FastifyInstance) {
   app.decorateRequest("multicaClient", null);
 
   app.addHook("onRequest", async (request) => {
@@ -13,3 +14,5 @@ export default async function authPlugin(app: FastifyInstance) {
     }
   });
 }
+
+export default fp(authPlugin, { name: "auth-plugin" });

@@ -78,9 +78,10 @@ describe("Event Store", () => {
     await pushEvent(redis as any, "ws-1", event);
 
     expect(redis.multi).toHaveBeenCalled();
-    expect(redis.lpush).toHaveBeenCalledWith(key, JSON.stringify(event));
-    expect(redis.ltrim).toHaveBeenCalledWith(key, 0, 99);
-    expect(redis.exec).toHaveBeenCalled();
+    const multi = redis.multi.mock.results[0].value;
+    expect(multi.lpush).toHaveBeenCalledWith(key, JSON.stringify(event));
+    expect(multi.ltrim).toHaveBeenCalledWith(key, 0, 99);
+    expect(multi.exec).toHaveBeenCalled();
   });
 
   it("getRecentEvents returns empty list when no events", async () => {

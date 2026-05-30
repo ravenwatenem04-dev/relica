@@ -15,7 +15,9 @@
     "@fastify/cors": "^10.0.0",
     "@fastify/cookie": "^10.0.0",
     "@fastify/session": "^11.0.0",
+    "@sinclair/typebox": "^0.34.41",
     "connect-redis": "^8.0.0",
+    "fastify-plugin": "^5.0.1",
     "ioredis": "^5.4.0",
     "uuid": "^10.0.0"
   },
